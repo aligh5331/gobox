@@ -10,10 +10,12 @@ import (
 
 // Config holds all environment-driven configuration for the Core API.
 type Config struct {
-	HTTPPort     int
-	AuthGRPCAddr string
-	AuthHTTPAddr string
-	LogLevel     string
+	HTTPPort         int
+	AuthGRPCAddr     string
+	AuthHTTPAddr     string
+	FileUploadGRPCAddr string
+	ThumbGenGRPCAddr   string
+	LogLevel         string
 }
 
 // Load reads configuration from environment variables.
@@ -24,10 +26,12 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		HTTPPort:     httpPort,
-		AuthGRPCAddr: getEnv("AUTH_GRPC_ADDR", "localhost:8081"),
-		AuthHTTPAddr: getEnv("AUTH_HTTP_ADDR", "http://localhost:8080"),
-		LogLevel:     getEnv("LOG_LEVEL", "info"),
+		HTTPPort:           httpPort,
+		AuthGRPCAddr:       getEnv("AUTH_GRPC_ADDR", "localhost:8081"),
+		AuthHTTPAddr:       getEnv("AUTH_HTTP_ADDR", "http://localhost:8080"),
+		FileUploadGRPCAddr: getEnv("FILEUPLOAD_GRPC_ADDR", "localhost:8082"),
+		ThumbGenGRPCAddr:   getEnv("THUMBGEN_GRPC_ADDR", "localhost:8083"),
+		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}
 	return cfg, nil
 }

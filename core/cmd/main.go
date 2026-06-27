@@ -12,7 +12,10 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient"
+	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/fileupload"
+	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/thumbgen"
 	"github.com/aligh5331/gobox/core/internal/interface/rest"
+	"github.com/aligh5331/gobox/core/internal/interface/rest/handler"
 	"github.com/aligh5331/gobox/core/internal/interface/rest/middleware"
 	"github.com/aligh5331/gobox/core/pkg/config"
 	"github.com/aligh5331/gobox/core/pkg/jwtutil"
@@ -29,7 +32,11 @@ func main() {
 
 	// Initialize logger.
 	log := logger.New(cfg.LogLevel)
-	log.Info().Int("port", cfg.HTTPPort).Str("auth_grpc", cfg.AuthGRPCAddr).Msg("starting core api")
+	log.Info().
+		Int("port", cfg.HTTPPort).
+		Str("auth_grpc", cfg.AuthGRPCAddr).
+		Str("fileupload_grpc", cfg.FileUploadGRPCAddr).
+		Msg("starting core api")
 
 	// Create root context for lifecycle management.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -53,6 +60,20 @@ func main() {
 	}
 	defer authClient.Close()
 
+	// Dial FileUpload gRPC.
+	fileuploadClient, err := fileupload.NewClient(ctx, cfg.FileUploadGRPCAddr)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to fileupload gRPC")
+	}
+	defer fileuploadClient.Close()
+
+	// Create ThumbGen stub (no-op until Phase 5).
+	thumbgenClient, err := thumbgen.NewClient(ctx, cfg.ThumbGenGRPCAddr)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create thumbgen client")
+	}
+	defer thumbgenClient.Close()
+
 	// Build Echo server.
 	e := echo.New()
 	e.HideBanner = true
@@ -64,8 +85,9 @@ func main() {
 	// Register routes.
 	authHandler := rest.NewAuthHandler(authClient)
 	meHandler := rest.NewMeHandler(authClient)
+	fileHandler := handler.NewFileHandler(fileuploadClient, thumbgenClient, log)
 	jwtMW := middleware.JWTAuth(jwksCache, log)
-	rest.RegisterRoutes(e, authHandler, meHandler, jwtMW)
+	rest.RegisterRoutes(e, authHandler, meHandler, fileHandler, jwtMW)
 
 	// Start server.
 	go func() {

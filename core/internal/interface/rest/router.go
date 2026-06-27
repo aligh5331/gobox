@@ -3,15 +3,18 @@ package rest
 
 import (
 	"github.com/labstack/echo/v4"
+
+	"github.com/aligh5331/gobox/core/internal/interface/rest/handler"
 )
 
-// RegisterRoutes registers all Phase 2 routes (auth and /me endpoints).
+// RegisterRoutes registers all routes for the Core API.
 // The jwtMiddleware is applied to authenticated routes only.
 // Later phases extend this function with new handler parameters and route groups.
 func RegisterRoutes(
 	e *echo.Echo,
 	authHandler *AuthHandler,
 	meHandler *MeHandler,
+	fileHandler *handler.FileHandler,
 	jwtMiddleware echo.MiddlewareFunc,
 ) {
 	// Public group — no JWT required.
@@ -28,6 +31,14 @@ func RegisterRoutes(
 	authed.GET("/api/v1/me", meHandler.GetMe)
 	authed.PUT("/api/v1/me", meHandler.UpdateMe)
 	authed.PUT("/api/v1/me/password", meHandler.ChangePassword)
+
+	// File routes.
+	authed.POST("/api/v1/files", fileHandler.InitiateUpload)
+	authed.POST("/api/v1/files/:id/confirm", fileHandler.ConfirmUpload)
+	authed.GET("/api/v1/files", fileHandler.ListFiles)
+	authed.GET("/api/v1/files/:id", fileHandler.GetFile)
+	authed.DELETE("/api/v1/files/:id", fileHandler.DeleteFile)
+	authed.GET("/api/v1/files/:id/download", fileHandler.GetDownloadURL)
 }
 
 // healthCheck returns a simple health status.
