@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
 )
 
 // UserRepository defines the persistence contract for User entities.

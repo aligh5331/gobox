@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 
-	"git.0lab.ir/aligh/gobox/auth/pkg/jwtutil"
+	"github.com/aligh5331/gobox/auth/pkg/jwtutil"
 )
 
 // Server serves HTTP endpoints using Echo.
@@ -43,6 +43,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) setupRoutes() {
 	s.e.GET("/.well-known/jwks.json", s.handleJWKS)
+	s.e.GET("/auth/v1/.well-known/jwks.json", s.handleJWKS)
 	s.e.GET("/health", s.handleHealth)
 }
 

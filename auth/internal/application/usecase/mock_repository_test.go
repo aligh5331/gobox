@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
 )
 
 // MockUserRepo is a mock implementation of repository.UserRepository.

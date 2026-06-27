@@ -13,11 +13,11 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "git.0lab.ir/aligh/gobox-proto/gen/auth/v1"
-	"git.0lab.ir/aligh/gobox/auth/internal/application/usecase"
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/repository"
-	"git.0lab.ir/aligh/gobox/auth/pkg/jwtutil"
+	pb "github.com/aligh5331/gobox-proto/gen/auth/v1"
+	"github.com/aligh5331/gobox/auth/internal/application/usecase"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/repository"
+	"github.com/aligh5331/gobox/auth/pkg/jwtutil"
 )
 
 // AuthServer implements the proto AuthServiceServer.

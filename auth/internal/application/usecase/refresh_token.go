@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/repository"
-	"git.0lab.ir/aligh/gobox/auth/pkg/jwtutil"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/repository"
+	"github.com/aligh5331/gobox/auth/pkg/jwtutil"
 )
 
 // RefreshTokenOutput contains the result of a successful token refresh.

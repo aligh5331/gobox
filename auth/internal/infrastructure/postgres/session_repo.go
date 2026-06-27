@@ -10,8 +10,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/repository"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/repository"
 )
 
 // SessionRepo implements repository.SessionRepository using GORM.

@@ -23,14 +23,14 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	pb "git.0lab.ir/aligh/gobox-proto/gen/auth/v1"
-	"git.0lab.ir/aligh/gobox/auth/internal/application/usecase"
-	authpostgres "git.0lab.ir/aligh/gobox/auth/internal/infrastructure/postgres"
-	grpcserver "git.0lab.ir/aligh/gobox/auth/internal/interface/grpc"
-	"git.0lab.ir/aligh/gobox/auth/internal/interface/rest"
-	"git.0lab.ir/aligh/gobox/auth/pkg/config"
-	"git.0lab.ir/aligh/gobox/auth/pkg/jwtutil"
-	"git.0lab.ir/aligh/gobox/auth/pkg/logger"
+	pb "github.com/aligh5331/gobox-proto/gen/auth/v1"
+	"github.com/aligh5331/gobox/auth/internal/application/usecase"
+	authpostgres "github.com/aligh5331/gobox/auth/internal/infrastructure/postgres"
+	grpcserver "github.com/aligh5331/gobox/auth/internal/interface/grpc"
+	"github.com/aligh5331/gobox/auth/internal/interface/rest"
+	"github.com/aligh5331/gobox/auth/pkg/config"
+	"github.com/aligh5331/gobox/auth/pkg/jwtutil"
+	"github.com/aligh5331/gobox/auth/pkg/logger"
 )
 
 func main() {

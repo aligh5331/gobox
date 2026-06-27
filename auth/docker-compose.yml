@@ -1,38 +1,17 @@
-
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: gobox
-      POSTGRES_PASSWORD: gobox
-      POSTGRES_DB: gobox_auth
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gobox -d gobox_auth"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   auth:
-    build:
-      context: .
-      additional_contexts:
-        - goboxproto=../../gobox-proto
+    build: .
     ports:
-      - "8080:8080"
       - "8081:8081"
+      - "8082:8080"
     environment:
-      DATABASE_URL: postgres://gobox:gobox@postgres:5432/gobox_auth?sslmode=disable
       GRPC_PORT: "8081"
       HTTP_PORT: "8080"
-      JWT_PRIVATE_KEY_PATH: /secrets/private.pem
-      LOG_LEVEL: debug
+      DATABASE_URL: "postgres://gobox:gobox@postgres:5432/gobox?sslmode=disable"
+      JWT_PRIVATE_KEY_PATH: "/app/keys/private.pem"
+      LOG_LEVEL: "info"
     volumes:
-      - ./testdata/private.pem:/secrets/private.pem:ro
+      - ./keys:/app/keys:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,8 +19,34 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 15s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - gobox
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gobox
+      POSTGRES_PASSWORD: gobox
+      POSTGRES_DB: gobox
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gobox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - gobox
 
 volumes:
   pgdata:
+
+networks:
+  gobox:
+    name: gobox
+    driver: bridge

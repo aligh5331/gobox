@@ -1,0 +1,4 @@
+export HTTP_PORT=8080
+export AUTH_GRPC_ADDR=127.0.0.1:8081
+export AUTH_HTTP_ADDR=http://127.0.0.1:8082
+export LOG_LEVEL=debug

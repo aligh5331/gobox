@@ -1,9 +1,9 @@
-module git.0lab.ir/aligh/gobox/auth
+module github.com/aligh5331/gobox/auth
 
 go 1.26.4
 
 require (
-	git.0lab.ir/aligh/gobox-proto v0.0.0-20260627011710-7ed8880a2942
+	github.com/aligh5331/gobox-proto v0.0.0-20260627041126-d27e14b171e7
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0

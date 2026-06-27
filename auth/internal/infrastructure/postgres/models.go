@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
 )
 
 // UserModel is the GORM mapping for the users table.

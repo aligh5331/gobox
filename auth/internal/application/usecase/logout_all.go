@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/repository"
+	"github.com/aligh5331/gobox/auth/internal/domain/repository"
 )
 
 // LogoutAllUseCase handles revocation of all user sessions.

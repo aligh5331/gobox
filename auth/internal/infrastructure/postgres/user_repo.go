@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/model"
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/repository"
+	"github.com/aligh5331/gobox/auth/internal/domain/model"
+	"github.com/aligh5331/gobox/auth/internal/domain/repository"
 )
 
 // UserRepo implements repository.UserRepository using GORM.

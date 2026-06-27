@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 
-	"git.0lab.ir/aligh/gobox/auth/internal/domain/repository"
+	"github.com/aligh5331/gobox/auth/internal/domain/repository"
 )
 
 // ChangePasswordUseCase handles password changes.
