@@ -32,6 +32,9 @@ func (uc *GetFileUseCase) Execute(ctx context.Context, fileID, userID uuid.UUID)
 		}
 		return nil, fmt.Errorf("get file: find file: %w", err)
 	}
+	if file == nil {
+		return nil, ErrFileNotFound
+	}
 
 	if file.UserID != userID {
 		return nil, ErrPermissionDenied

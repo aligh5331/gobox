@@ -1,0 +1,4 @@
+services:
+  fileupload:
+    environment:
+      S3_PUBLIC_ENDPOINT: "http://localhost:9000"

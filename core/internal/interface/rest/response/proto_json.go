@@ -10,7 +10,7 @@ import (
 
 var marshaler = protojson.MarshalOptions{
 	EmitUnpopulated: false,
-	UseProtoNames:   false, // keeps camelCase field names
+	UseProtoNames:   true, // use proto field names (snake_case) matching feature spec
 }
 
 // ProtoJSON marshals a protobuf message using protojson and writes it as JSON.

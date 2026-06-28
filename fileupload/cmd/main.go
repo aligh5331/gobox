@@ -17,6 +17,7 @@ import (
 
 	pb "github.com/aligh5331/gobox-proto/gen/fileupload/v1"
 	"github.com/aligh5331/gobox/fileupload/internal/application/usecase"
+	"github.com/aligh5331/gobox/fileupload/internal/domain/model"
 	"github.com/aligh5331/gobox/fileupload/internal/infrastructure/minio"
 	pgRepo "github.com/aligh5331/gobox/fileupload/internal/infrastructure/postgres"
 	grpcServer "github.com/aligh5331/gobox/fileupload/internal/interface/grpc"
@@ -41,6 +42,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Auto-migrate the schema to ensure the files table exists.
+	if err := db.AutoMigrate(&model.File{}); err != nil {
+		slog.Error("failed to migrate database", "error", err)
+		os.Exit(1)
+	}
+
 	sqlDB, err := db.DB()
 	if err != nil {
 		slog.Error("failed to get sql.DB", "error", err)
@@ -58,6 +65,7 @@ func main() {
 		cfg.S3SecretKey,
 		cfg.S3Bucket,
 		false,
+		cfg.S3PublicEndpoint,
 	)
 	if err != nil {
 		slog.Error("failed to create S3 client", "error", err)

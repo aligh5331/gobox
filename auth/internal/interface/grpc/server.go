@@ -306,10 +306,12 @@ func mapError(err error) error {
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, usecase.ErrTokenTheftDetected):
 		return status.Error(codes.Unauthenticated, err.Error())
+	case errors.Is(err, usecase.ErrInvalidEmail):
+		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, usecase.ErrInvalidName):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, usecase.ErrInvalidPassword):
-		return status.Error(codes.InvalidArgument, err.Error())
+		return status.Error(codes.PermissionDenied, err.Error())
 	default:
 		return status.Errorf(codes.Internal, "%v", err)
 	}

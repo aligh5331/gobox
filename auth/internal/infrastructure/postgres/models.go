@@ -58,6 +58,7 @@ type SessionModel struct {
 	LastUsedAt       time.Time `gorm:"autoUpdateTime"`
 	ExpiresAt        time.Time `gorm:"not null"`
 	Revoked          bool      `gorm:"not null;default:false"`
+	Consumed         bool      `gorm:"not null;default:false"`
 }
 
 // TableName overrides the default table name.
@@ -76,6 +77,7 @@ func toDomainSession(m *SessionModel) *model.Session {
 		LastUsedAt:       m.LastUsedAt,
 		ExpiresAt:        m.ExpiresAt,
 		Revoked:          m.Revoked,
+		Consumed:         m.Consumed,
 	}
 }
 
@@ -90,5 +92,6 @@ func toGormSession(d *model.Session) *SessionModel {
 		LastUsedAt:       d.LastUsedAt,
 		ExpiresAt:        d.ExpiresAt,
 		Revoked:          d.Revoked,
+		Consumed:         d.Consumed,
 	}
 }

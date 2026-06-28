@@ -55,6 +55,15 @@ func (uc *RefreshTokenUseCase) Execute(ctx context.Context, refreshToken string)
 
 	now := time.Now()
 
+	// Check consumed (token was already rotated — token theft)
+	if session.Consumed {
+		uc.logger.Warn().
+			Str("user_id", session.UserID.String()).
+			Str("session_id", session.ID.String()).
+			Msg("token theft detected")
+		return nil, ErrTokenTheftDetected
+	}
+
 	// Check expiry
 	if now.After(session.ExpiresAt) {
 		return nil, ErrSessionExpired

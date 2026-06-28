@@ -37,6 +37,9 @@ func (uc *ConfirmUploadUseCase) Execute(ctx context.Context, fileID, userID uuid
 		}
 		return nil, fmt.Errorf("confirm upload: find file: %w", err)
 	}
+	if file == nil {
+		return nil, ErrFileNotFound
+	}
 
 	if file.UserID != userID {
 		return nil, ErrPermissionDenied

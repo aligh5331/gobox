@@ -62,7 +62,7 @@ func (r *SessionRepo) FindByRefreshToken(ctx context.Context, rawToken string) (
 	now := time.Now()
 	var models []SessionModel
 	result := r.db.WithContext(ctx).
-		Where("revoked = ? AND expires_at > ?", false, now).
+		Where("expires_at > ?", now).
 		Find(&models)
 	if result.Error != nil {
 		return nil, fmt.Errorf("postgres: find sessions for refresh: %w", result.Error)
@@ -121,11 +121,14 @@ func (r *SessionRepo) Rotate(ctx context.Context, oldSessionID uuid.UUID, newSes
 		}
 	}()
 
-	// Delete old session atomically
-	result := tx.WithContext(ctx).Where("id = ?", oldSessionID.String()).Delete(&SessionModel{})
+	// Mark old session as consumed atomically (fail concurrent reuse)
+	result := tx.WithContext(ctx).
+		Model(&SessionModel{}).
+		Where("id = ? AND consumed = ?", oldSessionID.String(), false).
+		Updates(map[string]interface{}{"consumed": true, "revoked": true})
 	if result.Error != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("postgres: rotate delete old: %w", result.Error)
+		return nil, fmt.Errorf("postgres: rotate consume old: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		tx.Rollback()

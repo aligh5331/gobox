@@ -17,4 +17,5 @@ type Session struct {
 	LastUsedAt       time.Time
 	ExpiresAt        time.Time
 	Revoked          bool
+	Consumed         bool
 }

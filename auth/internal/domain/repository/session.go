@@ -16,8 +16,9 @@ type SessionRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*model.Session, error)
 	// FindByUserID retrieves all sessions belonging to a user.
 	FindByUserID(ctx context.Context, userID uuid.UUID) ([]model.Session, error)
-	// FindByRefreshToken scans non-expired, non-revoked sessions for a
-	// refresh token match using bcrypt comparison.
+	// FindByRefreshToken scans non-expired sessions for a refresh token
+	// match using bcrypt comparison. Returns sessions regardless of their
+	// revoked or consumed state.
 	FindByRefreshToken(ctx context.Context, rawToken string) (*model.Session, error)
 	// Delete removes a session by its primary key.
 	Delete(ctx context.Context, id uuid.UUID) error

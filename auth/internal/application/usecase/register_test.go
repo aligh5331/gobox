@@ -113,7 +113,7 @@ func TestRegisterUseCase_InvalidEmail(t *testing.T) {
 	uc := NewRegisterUseCase(userRepo, sessionRepo, signer, logger)
 
 	output, err := uc.Execute(context.Background(), "not-an-email", "Bob", "ValidPass1!")
-	assert.ErrorIs(t, err, ErrInvalidCredentials)
+	assert.ErrorIs(t, err, ErrInvalidEmail)
 	assert.Nil(t, output)
 }
 

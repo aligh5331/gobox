@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -213,6 +214,8 @@ func mapUseCaseError(err error) error {
 		return status.Error(codes.FailedPrecondition, "file is not yet ready")
 	case isError(err, usecase.ErrObjectNotExists):
 		return status.Error(codes.NotFound, "upload not yet completed")
+	case isError(err, usecase.ErrPermissionDenied):
+		return status.Error(codes.NotFound, "file not found")
 	default:
 		return status.Error(codes.Internal, fmt.Sprintf("internal error: %v", err))
 	}
@@ -220,5 +223,5 @@ func mapUseCaseError(err error) error {
 
 // isError checks if err matches target using errors.Is.
 func isError(err, target error) bool {
-	return err == target
+	return errors.Is(err, target)
 }

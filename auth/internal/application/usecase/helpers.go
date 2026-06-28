@@ -45,7 +45,7 @@ func validatePassword(password string) error {
 // validateEmail performs a basic check that the email is non-empty and contains an @.
 func validateEmail(email string) error {
 	if email == "" || !strings.Contains(email, "@") {
-		return ErrInvalidCredentials
+		return ErrInvalidEmail
 	}
 	return nil
 }

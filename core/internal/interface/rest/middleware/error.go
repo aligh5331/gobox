@@ -97,6 +97,8 @@ func grpcToHTTP(c codes.Code) (int, string) {
 		return http.StatusBadRequest, "BAD_REQUEST"
 	case codes.PermissionDenied:
 		return http.StatusForbidden, "FORBIDDEN"
+	case codes.FailedPrecondition:
+		return http.StatusBadRequest, "FAILED_PRECONDITION"
 	case codes.Internal:
 		return http.StatusInternalServerError, "INTERNAL_ERROR"
 	default:

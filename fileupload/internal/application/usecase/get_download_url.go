@@ -46,6 +46,9 @@ func (uc *GetDownloadURLUseCase) Execute(ctx context.Context, fileID uuid.UUID, 
 		}
 		return nil, fmt.Errorf("get download url: find file: %w", err)
 	}
+	if file == nil {
+		return nil, ErrFileNotFound
+	}
 
 	if file.Status != model.FileStatusReady {
 		return nil, ErrFileNotReady

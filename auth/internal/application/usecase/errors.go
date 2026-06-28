@@ -15,6 +15,7 @@ var (
 	ErrSessionRevoked         = errors.New("SESSION_REVOKED")
 	ErrSessionAlreadyRevoked  = errors.New("SESSION_ALREADY_REVOKED")
 	ErrTokenTheftDetected     = errors.New("TOKEN_THEFT_DETECTED")
+	ErrInvalidEmail           = errors.New("INVALID_EMAIL")
 	ErrInvalidName            = errors.New("INVALID_NAME")
 	ErrInvalidPassword        = errors.New("INVALID_PASSWORD")
 )

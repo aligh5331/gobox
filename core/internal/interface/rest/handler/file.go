@@ -60,7 +60,7 @@ func (h *FileHandler) InitiateUpload(c echo.Context) error {
 		return middleware.MapGRPCError(err)
 	}
 
-	return response.ProtoJSON(c, http.StatusCreated, resp)
+	return response.ProtoJSON(c, http.StatusAccepted, resp)
 }
 
 // ConfirmUploadRequest is the expected JSON body for POST /api/v1/files/:id/confirm.

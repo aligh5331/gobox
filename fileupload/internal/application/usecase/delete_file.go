@@ -34,6 +34,9 @@ func (uc *DeleteFileUseCase) Execute(ctx context.Context, fileID, userID uuid.UU
 		}
 		return fmt.Errorf("delete file: find file: %w", err)
 	}
+	if file == nil {
+		return ErrFileNotFound
+	}
 
 	if file.UserID != userID {
 		return ErrPermissionDenied
