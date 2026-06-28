@@ -9,12 +9,12 @@ import (
 
 // RegisterRoutes registers all routes for the Core API.
 // The jwtMiddleware is applied to authenticated routes only.
-// Later phases extend this function with new handler parameters and route groups.
 func RegisterRoutes(
 	e *echo.Echo,
 	authHandler *AuthHandler,
 	meHandler *MeHandler,
 	fileHandler *handler.FileHandler,
+	shareHandler *handler.ShareHandler,
 	jwtMiddleware echo.MiddlewareFunc,
 ) {
 	// Public group — no JWT required.
@@ -39,6 +39,11 @@ func RegisterRoutes(
 	authed.GET("/api/v1/files/:id", fileHandler.GetFile)
 	authed.DELETE("/api/v1/files/:id", fileHandler.DeleteFile)
 	authed.GET("/api/v1/files/:id/download", fileHandler.GetDownloadURL)
+
+	// Share (short link) routes.
+	authed.POST("/api/v1/files/:id/share", shareHandler.CreateShare)
+	authed.GET("/api/v1/files/:id/links", shareHandler.ListLinks)
+	authed.DELETE("/api/v1/links/:link_id", shareHandler.DeleteLink)
 }
 
 // healthCheck returns a simple health status.

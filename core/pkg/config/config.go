@@ -10,12 +10,13 @@ import (
 
 // Config holds all environment-driven configuration for the Core API.
 type Config struct {
-	HTTPPort         int
-	AuthGRPCAddr     string
-	AuthHTTPAddr     string
+	HTTPPort           int
+	AuthGRPCAddr       string
+	AuthHTTPAddr       string
 	FileUploadGRPCAddr string
 	ThumbGenGRPCAddr   string
-	LogLevel         string
+	ShortenerGRPCAddr  string
+	LogLevel           string
 }
 
 // Load reads configuration from environment variables.
@@ -31,6 +32,7 @@ func Load() (*Config, error) {
 		AuthHTTPAddr:       getEnv("AUTH_HTTP_ADDR", "http://localhost:8080"),
 		FileUploadGRPCAddr: getEnv("FILEUPLOAD_GRPC_ADDR", "localhost:8082"),
 		ThumbGenGRPCAddr:   getEnv("THUMBGEN_GRPC_ADDR", "localhost:8083"),
+		ShortenerGRPCAddr:  getEnv("SHORTENER_GRPC_ADDR", "localhost:9091"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}
 	return cfg, nil

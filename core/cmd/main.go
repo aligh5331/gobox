@@ -13,6 +13,7 @@ import (
 
 	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient"
 	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/fileupload"
+	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/shortener"
 	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/thumbgen"
 	"github.com/aligh5331/gobox/core/internal/interface/rest"
 	"github.com/aligh5331/gobox/core/internal/interface/rest/handler"
@@ -36,6 +37,7 @@ func main() {
 		Int("port", cfg.HTTPPort).
 		Str("auth_grpc", cfg.AuthGRPCAddr).
 		Str("fileupload_grpc", cfg.FileUploadGRPCAddr).
+		Str("shortener_grpc", cfg.ShortenerGRPCAddr).
 		Msg("starting core api")
 
 	// Create root context for lifecycle management.
@@ -74,6 +76,13 @@ func main() {
 	}
 	defer thumbgenClient.Close()
 
+	// Dial Shortener gRPC.
+	shortenerClient, err := shortener.NewClient(ctx, cfg.ShortenerGRPCAddr)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to shortener gRPC")
+	}
+	defer shortenerClient.Close()
+
 	// Build Echo server.
 	e := echo.New()
 	e.HideBanner = true
@@ -86,8 +95,9 @@ func main() {
 	authHandler := rest.NewAuthHandler(authClient)
 	meHandler := rest.NewMeHandler(authClient)
 	fileHandler := handler.NewFileHandler(fileuploadClient, thumbgenClient, log)
+	shareHandler := handler.NewShareHandler(shortenerClient)
 	jwtMW := middleware.JWTAuth(jwksCache, log)
-	rest.RegisterRoutes(e, authHandler, meHandler, fileHandler, jwtMW)
+	rest.RegisterRoutes(e, authHandler, meHandler, fileHandler, shareHandler, jwtMW)
 
 	// Start server.
 	go func() {
