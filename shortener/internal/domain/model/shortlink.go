@@ -9,19 +9,14 @@ import (
 
 // ShortLink represents a short link pointing to a file.
 type ShortLink struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	FileID    uuid.UUID  `gorm:"type:uuid;not null;index"`
-	UserID    uuid.UUID  `gorm:"type:uuid;not null;index"`
-	Slug      string     `gorm:"type:varchar(6);not null;uniqueIndex"`
-	TargetURL string     `gorm:"type:text;not null;default:''"`
-	HitCount  int64      `gorm:"not null;default:0"`
-	ExpiresAt *time.Time `gorm:"index"`
-	CreatedAt time.Time  `gorm:"autoCreateTime"`
-}
-
-// TableName overrides the GORM table name.
-func (ShortLink) TableName() string {
-	return "short_links"
+	ID        uuid.UUID
+	FileID    uuid.UUID
+	UserID    uuid.UUID
+	Slug      string
+	TargetURL string
+	HitCount  int64
+	ExpiresAt *time.Time
+	CreatedAt time.Time
 }
 
 // IsExpired returns true if the link has an expiry and it has passed.

@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -11,20 +12,25 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/fileupload"
-	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/thumbgen"
 	"github.com/aligh5331/gobox/core/internal/interface/rest/middleware"
 	"github.com/aligh5331/gobox/core/internal/interface/rest/response"
 )
 
+// Thumbnailer is the interface for thumbnail generation.
+// It shields FileHandler from the concrete thumbgen client dependency.
+type Thumbnailer interface {
+	EnqueueJob(ctx context.Context, req *thumbgenv1.EnqueueJobRequest) (*thumbgenv1.EnqueueJobResponse, error)
+}
+
 // FileHandler handles file-related REST endpoints.
 type FileHandler struct {
-	file    *fileupload.Client
-	thumb   *thumbgen.Client
-	log     zerolog.Logger
+	file  *fileupload.Client
+	thumb Thumbnailer
+	log   zerolog.Logger
 }
 
 // NewFileHandler creates a new FileHandler.
-func NewFileHandler(file *fileupload.Client, thumb *thumbgen.Client, log zerolog.Logger) *FileHandler {
+func NewFileHandler(file *fileupload.Client, thumb Thumbnailer, log zerolog.Logger) *FileHandler {
 	return &FileHandler{file: file, thumb: thumb, log: log}
 }
 
@@ -100,19 +106,21 @@ func (h *FileHandler) ConfirmUpload(c echo.Context) error {
 		return middleware.MapGRPCError(err)
 	}
 
-	// Fire-and-forget thumbnail generation.
-	go func() {
-		ctx := c.Request().Context()
-		_, tgErr := h.thumb.EnqueueJob(ctx, &thumbgenv1.EnqueueJobRequest{
-			FileId:   fileID,
-			UserId:   userID,
-			InputKey: req.StorageKey,
-			MimeType: req.MimeType,
-		})
-		if tgErr != nil {
-			h.log.Warn().Err(tgErr).Str("file_id", fileID).Msg("thumbgen: enqueue job failed (stub)")
-		}
-	}()
+	// Fire-and-forget thumbnail generation (no-op when thumbgen is disabled).
+	if h.thumb != nil {
+		go func() {
+			ctx := c.Request().Context()
+			_, tgErr := h.thumb.EnqueueJob(ctx, &thumbgenv1.EnqueueJobRequest{
+				FileId:   fileID,
+				UserId:   userID,
+				InputKey: req.StorageKey,
+				MimeType: req.MimeType,
+			})
+			if tgErr != nil {
+				h.log.Warn().Err(tgErr).Str("file_id", fileID).Msg("thumbgen: enqueue job failed (stub)")
+			}
+		}()
+	}
 
 	return response.ProtoJSON(c, http.StatusOK, resp)
 }

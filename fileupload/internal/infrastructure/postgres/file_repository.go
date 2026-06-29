@@ -55,40 +55,41 @@ func NewFileRepository(db *gorm.DB) *FileRepository {
 }
 
 func (r *FileRepository) Create(ctx context.Context, file *model.File) error {
-	return r.db.WithContext(ctx).Create(file).Error
+	return r.db.WithContext(ctx).Create(toDTO(file)).Error
 }
 
 func (r *FileRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.File, error) {
-	var file model.File
+	var dto FileDTO
 	err := r.db.WithContext(ctx).
 		Where("deleted_at IS NULL").
-		First(&file, "id = ?", id).Error
+		First(&dto, "id = ?", id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("postgres: find by id: %w", err)
 	}
-	return &file, nil
+	return dto.toDomain(), nil
 }
 
 func (r *FileRepository) FindByIDAndUser(ctx context.Context, id uuid.UUID, userID string) (*model.File, error) {
-	var file model.File
+	var dto FileDTO
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
-		First(&file).Error
+		First(&dto).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("postgres: find by id and user: %w", err)
 	}
-	return &file, nil
+	return dto.toDomain(), nil
 }
 
 func (r *FileRepository) FindByUserID(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]*model.File, string, error) {
-	var files []*model.File
+	var dtos []FileDTO
 	query := r.db.WithContext(ctx).
+		Model(&FileDTO{}).
 		Where("user_id = ? AND deleted_at IS NULL", userID).
 		Order("created_at DESC").
 		Limit(limit + 1)
@@ -101,8 +102,13 @@ func (r *FileRepository) FindByUserID(ctx context.Context, userID uuid.UUID, cur
 		query = query.Where("created_at < (SELECT created_at FROM files WHERE id = ?)", lastID)
 	}
 
-	if err := query.Find(&files).Error; err != nil {
+	if err := query.Find(&dtos).Error; err != nil {
 		return nil, "", fmt.Errorf("postgres: find by user: %w", err)
+	}
+
+	files := make([]*model.File, len(dtos))
+	for i := range dtos {
+		files[i] = dtos[i].toDomain()
 	}
 
 	var nextToken string
@@ -116,9 +122,9 @@ func (r *FileRepository) FindByUserID(ctx context.Context, userID uuid.UUID, cur
 
 func (r *FileRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status model.FileStatus) error {
 	result := r.db.WithContext(ctx).
-		Model(&model.File{}).
+		Model(&FileDTO{}).
 		Where("id = ? AND deleted_at IS NULL", id).
-		Update("status", status)
+		Update("status", string(status))
 	if result.Error != nil {
 		return fmt.Errorf("postgres: update status: %w", result.Error)
 	}
@@ -129,12 +135,12 @@ func (r *FileRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status 
 }
 
 func (r *FileRepository) Update(ctx context.Context, file *model.File) error {
-	return r.db.WithContext(ctx).Save(file).Error
+	return r.db.WithContext(ctx).Save(toDTO(file)).Error
 }
 
 func (r *FileRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).
-		Model(&model.File{}).
+		Model(&FileDTO{}).
 		Where("id = ? AND deleted_at IS NULL", id).
 		Update("deleted_at", gorm.Expr("NOW()"))
 	if result.Error != nil {

@@ -48,5 +48,5 @@ volumes:
 
 networks:
   gobox:
+    external: true
     name: gobox
-    driver: bridge

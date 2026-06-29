@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,13 +12,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	gormpg "gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 
 	pb "github.com/aligh5331/gobox-proto/gen/shortener/v1"
 	"github.com/aligh5331/gobox/shortener/internal/application/usecase"
@@ -26,6 +30,7 @@ import (
 	grpcServer "github.com/aligh5331/gobox/shortener/internal/interface/grpc"
 	"github.com/aligh5331/gobox/shortener/internal/interface/rest/handler"
 	"github.com/aligh5331/gobox/shortener/pkg/config"
+	"github.com/aligh5331/gobox/shortener/pkg/logger"
 	"github.com/aligh5331/gobox/shortener/pkg/slug"
 )
 
@@ -38,7 +43,7 @@ func main() {
 	}
 
 	// Initialize logger.
-	log := newLogger(cfg)
+	log := logger.New(cfg.LogLevel)
 	log.Info().
 		Str("grpc_port", cfg.GRPCPort).
 		Str("http_port", cfg.HTTPPort).
@@ -47,7 +52,7 @@ func main() {
 
 	// Connect to Postgres.
 	db, err := gorm.Open(gormpg.Open(cfg.DatabaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
@@ -57,6 +62,12 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to get sql.DB")
 	}
 	defer sqlDB.Close()
+
+	// Run database migrations.
+	if err := runMigrations(cfg.DatabaseURL, log); err != nil {
+		log.Fatal().Err(err).Msg("failed to run migrations")
+	}
+	log.Info().Msg("database migrations completed")
 
 	// Connect to Redis.
 	redisCache, err := redis.NewCache(cfg.RedisURL)
@@ -147,12 +158,17 @@ func main() {
 	log.Info().Msg("shutdown complete")
 }
 
-func newLogger(_ *config.Config) zerolog.Logger {
-	lvl, err := zerolog.ParseLevel(os.Getenv("LOG_LEVEL"))
+func runMigrations(dbURL string, log zerolog.Logger) error {
+	m, err := migrate.New("file://migrations", dbURL)
 	if err != nil {
-		lvl = zerolog.InfoLevel
+		return fmt.Errorf("migrate init: %w", err)
 	}
-	return zerolog.New(os.Stdout).Level(lvl).With().Timestamp().Logger()
+	defer m.Close()
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("migrate up: %w", err)
+	}
+	return nil
 }
 
 func healthCheck(c echo.Context) error {

@@ -92,6 +92,7 @@ func main() {
 	getUserUC := usecase.NewGetUserUseCase(userRepo, log)
 	updateProfileUC := usecase.NewUpdateProfileUseCase(userRepo, log)
 	changePasswordUC := usecase.NewChangePasswordUseCase(userRepo, log)
+	validateSessionUC := usecase.NewValidateSessionUseCase(sessionRepo)
 
 	// -----------------------------------------------------------------------
 	// gRPC server
@@ -111,7 +112,7 @@ func main() {
 		getUserUC,
 		updateProfileUC,
 		changePasswordUC,
-		sessionRepo,
+		validateSessionUC,
 		keyManager,
 	)
 	pb.RegisterAuthServiceServer(grpcSrv, authSrv)

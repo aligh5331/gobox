@@ -32,7 +32,7 @@ func NewShortLinkRepository(db *gorm.DB) *ShortLinkRepository {
 }
 
 func (r *ShortLinkRepository) Create(ctx context.Context, link *model.ShortLink) error {
-	err := r.db.WithContext(ctx).Create(link).Error
+	err := r.db.WithContext(ctx).Create(toShortLinkDTO(link)).Error
 	if err != nil {
 		if isDuplicate(err) {
 			return fmt.Errorf("postgres: %w", repository.ErrDuplicateSlug)
@@ -43,32 +43,33 @@ func (r *ShortLinkRepository) Create(ctx context.Context, link *model.ShortLink)
 }
 
 func (r *ShortLinkRepository) FindBySlug(ctx context.Context, slug string) (*model.ShortLink, error) {
-	var link model.ShortLink
-	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&link).Error
+	var dto ShortLinkDTO
+	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&dto).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("postgres: find by slug: %w", err)
 	}
-	return &link, nil
+	return dto.toDomain(), nil
 }
 
 func (r *ShortLinkRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.ShortLink, error) {
-	var link model.ShortLink
-	err := r.db.WithContext(ctx).First(&link, "id = ?", id).Error
+	var dto ShortLinkDTO
+	err := r.db.WithContext(ctx).First(&dto, "id = ?", id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("postgres: find by id: %w", err)
 	}
-	return &link, nil
+	return dto.toDomain(), nil
 }
 
 func (r *ShortLinkRepository) FindByUserID(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]*model.ShortLink, string, error) {
-	var links []*model.ShortLink
+	var dtos []ShortLinkDTO
 	query := r.db.WithContext(ctx).
+		Model(&ShortLinkDTO{}).
 		Where("user_id = ?", userID).
 		Order("created_at DESC").
 		Limit(limit + 1)
@@ -81,8 +82,13 @@ func (r *ShortLinkRepository) FindByUserID(ctx context.Context, userID uuid.UUID
 		query = query.Where("(created_at < ? OR (created_at = ? AND id < ?))", lastCreatedAt, lastCreatedAt, lastID)
 	}
 
-	if err := query.Find(&links).Error; err != nil {
+	if err := query.Find(&dtos).Error; err != nil {
 		return nil, "", fmt.Errorf("postgres: find by user: %w", err)
+	}
+
+	links := make([]*model.ShortLink, len(dtos))
+	for i := range dtos {
+		links[i] = dtos[i].toDomain()
 	}
 
 	var nextToken string
@@ -95,7 +101,7 @@ func (r *ShortLinkRepository) FindByUserID(ctx context.Context, userID uuid.UUID
 }
 
 func (r *ShortLinkRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result := r.db.WithContext(ctx).Delete(&model.ShortLink{}, "id = ?", id)
+	result := r.db.WithContext(ctx).Delete(&ShortLinkDTO{}, "id = ?", id)
 	if result.Error != nil {
 		return fmt.Errorf("postgres: delete: %w", result.Error)
 	}
@@ -107,7 +113,7 @@ func (r *ShortLinkRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *ShortLinkRepository) IncrementHitCount(ctx context.Context, slug string) error {
 	result := r.db.WithContext(ctx).
-		Model(&model.ShortLink{}).
+		Model(&ShortLinkDTO{}).
 		Where("slug = ?", slug).
 		UpdateColumn("hit_count", gorm.Expr("hit_count + 1"))
 	if result.Error != nil {

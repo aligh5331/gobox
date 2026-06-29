@@ -3,7 +3,6 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"strconv"
 )
@@ -40,6 +39,10 @@ type Config struct {
 
 	// MaxFileSize is the maximum allowed file size in bytes (default 100 MiB).
 	MaxFileSize int64
+
+	// LogLevel is the zerolog log level (debug, info, warn, error).
+	// Defaults to "info".
+	LogLevel string
 }
 
 // Load reads configuration from environment variables with defaults.
@@ -55,6 +58,7 @@ func Load() (*Config, error) {
 		PresignUploadTTLMinutes:  getEnvInt("PRESIGN_UPLOAD_TTL_MINUTES", 15),
 		PresignDownloadTTLMinutes: getEnvInt("PRESIGN_DOWNLOAD_TTL_MINUTES", 60),
 		MaxFileSize:              int64(getEnvInt("MAX_FILE_SIZE", 100*1024*1024)),
+		LogLevel:                 getEnv("LOG_LEVEL", "info"),
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -89,14 +93,10 @@ func (c *Config) validate() error {
 	}
 
 	if c.PresignUploadTTLMinutes > 1440 {
-		slog.Warn("presign upload TTL exceeds 24 hours (1440 minutes)",
-			"ttl_minutes", c.PresignUploadTTLMinutes,
-		)
+		fmt.Fprintf(os.Stderr, "WARN: presign upload TTL exceeds 24 hours (1440 minutes): ttl_minutes=%d\n", c.PresignUploadTTLMinutes)
 	}
 	if c.PresignDownloadTTLMinutes > 1440 {
-		slog.Warn("presign download TTL exceeds 24 hours (1440 minutes)",
-			"ttl_minutes", c.PresignDownloadTTLMinutes,
-		)
+		fmt.Fprintf(os.Stderr, "WARN: presign download TTL exceeds 24 hours (1440 minutes): ttl_minutes=%d\n", c.PresignDownloadTTLMinutes)
 	}
 
 	// Prepend ":" if GRPCAddr is just a port number.

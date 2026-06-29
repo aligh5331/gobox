@@ -8,7 +8,6 @@ services:
       AUTH_GRPC_ADDR: "auth:8081"
       AUTH_HTTP_ADDR: "http://auth:8080"
       FILEUPLOAD_GRPC_ADDR: "fileupload:9090"
-      THUMBGEN_GRPC_ADDR: "thumbgen:8083"
       SHORTENER_GRPC_ADDR: "shortener:9091"
       LOG_LEVEL: "info"
       LOG_FORMAT: "pretty"

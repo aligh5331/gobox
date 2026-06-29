@@ -1,6 +1,6 @@
 # GoBox — Project Specification & Agent Guide
 
-> Version 0.1 — initial design  
+> Version 0.2 — initial design  
 > This file is the single source of truth for agentic coding sessions.  
 > Treat it as a security artifact: never autonomously overwrite it.
 
@@ -47,13 +47,13 @@ gobox/                        ← git root, go.work lives here
 ├── go.work                   ← workspace: lists all service modules
 ├── go.work.sum
 ├── auth/
-│   ├── go.mod                ← module: github.com/aligh/gobox/auth
+│   ├── go.mod                ← module: github.com/aligh5331/gobox/auth
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   ├── .env.example
 │   └── ...
 ├── core/
-│   ├── go.mod                ← module: github.com/aligh/gobox/core
+│   ├── go.mod                ← module: github.com/aligh5331/gobox/core
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   ├── .env.example
@@ -81,7 +81,7 @@ gobox/                        ← git root, go.work lives here
 `go.work` example:
 
 ```
-go 1.23
+go 1.26
 
 use (
     ./auth
@@ -92,7 +92,7 @@ use (
 )
 ```
 
-gobox-proto lives in a **separate Git repo**: `github.com/aligh/gobox-proto`  
+gobox-proto lives in a **separate Git repo**: `github.com/aligh5331/gobox-proto`  
 Each service imports it as a normal Go module dependency in its `go.mod`.
 
 ---
@@ -184,7 +184,7 @@ Imports flow **inward only**:
 
 ### 5.1 Auth service
 
-**Module:** `github.com/aligh/gobox/auth`  
+**Module:** `github.com/aligh5331/gobox/auth`  
 **Public port:** 8081 (gRPC) + 8080 (HTTP for JWKS + health only)  
 **DB:** Postgres
 
@@ -250,7 +250,7 @@ GET  /health
 
 ### 5.2 Core API
 
-**Module:** `github.com/aligh/gobox/core`  
+**Module:** `github.com/aligh5331/gobox/core`  
 **Public port:** 8080 (REST)  
 **DB:** none (stateless gateway)  
 **gRPC clients to:** Auth, FileUpload, Shortener, ThumbGen
@@ -305,7 +305,7 @@ HTTP status codes follow gRPC status → HTTP mapping conventions.
 
 ### 5.3 File Upload Center
 
-**Module:** `github.com/aligh/gobox/fileupload`  
+**Module:** `github.com/aligh5331/gobox/fileupload`  
 **Public port:** none (internal gRPC only — port 9090)  
 **DB:** Postgres (metadata) + MinIO/S3 (blobs)
 
@@ -371,7 +371,7 @@ Core API → ThumbGen gRPC: EnqueueJob (async, fire-and-forget)
 
 ### 5.4 Link Shortener
 
-**Module:** `github.com/aligh/gobox/shortener`  
+**Module:** `github.com/aligh5331/gobox/shortener`  
 **Public port:** none internally; Core API proxies creation; redirect is public  
 **Port:** 9091 (gRPC internal) + 8082 (HTTP for public redirects only)  
 **DB:** Postgres + Redis (redirect cache)
@@ -422,7 +422,7 @@ GET /s/{slug}
 
 ### 5.5 Thumbnail Generator
 
-**Module:** `github.com/aligh/gobox/thumbgen`  
+**Module:** `github.com/aligh5331/gobox/thumbgen`  
 **Public port:** none (gRPC only — port 9092)  
 **DB:** Postgres (job queue) + MinIO/S3 (thumbnail blobs)  
 **Workers:** configurable pool (default 3)
@@ -475,12 +475,12 @@ service ThumbGenService {
 
 ## 6. gobox-proto repo
 
-**Repo:** `github.com/aligh/gobox-proto`  
+**Repo:** `github.com/aligh5331/gobox-proto`  
 **Imported by:** all services
 
 ```
 gobox-proto/
-├── go.mod              ← module: github.com/aligh/gobox-proto
+├── go.mod              ← module: github.com/aligh5331/gobox-proto
 ├── proto/
 │   ├── auth/
 │   │   └── v1/

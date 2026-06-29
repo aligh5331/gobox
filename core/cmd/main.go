@@ -69,12 +69,15 @@ func main() {
 	}
 	defer fileuploadClient.Close()
 
-	// Create ThumbGen stub (no-op until Phase 5).
-	thumbgenClient, err := thumbgen.NewClient(ctx, cfg.ThumbGenGRPCAddr)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create thumbgen client")
+	// Create ThumbGen client (nil-safe — only dials if addr is configured).
+	var thumbgenClient *thumbgen.Client
+	if cfg.ThumbGenGRPCAddr != "" {
+		thumbgenClient, err = thumbgen.NewClient(ctx, cfg.ThumbGenGRPCAddr)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create thumbgen client")
+		}
+		defer thumbgenClient.Close()
 	}
-	defer thumbgenClient.Close()
 
 	// Dial Shortener gRPC.
 	shortenerClient, err := shortener.NewClient(ctx, cfg.ShortenerGRPCAddr)

@@ -3,57 +3,61 @@ package main
 
 import (
 	"context"
-	"log/slog"
+	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 
 	pb "github.com/aligh5331/gobox-proto/gen/fileupload/v1"
 	"github.com/aligh5331/gobox/fileupload/internal/application/usecase"
-	"github.com/aligh5331/gobox/fileupload/internal/domain/model"
 	"github.com/aligh5331/gobox/fileupload/internal/infrastructure/minio"
 	pgRepo "github.com/aligh5331/gobox/fileupload/internal/infrastructure/postgres"
 	grpcServer "github.com/aligh5331/gobox/fileupload/internal/interface/grpc"
 	"github.com/aligh5331/gobox/fileupload/pkg/config"
+	"github.com/aligh5331/gobox/fileupload/pkg/logger"
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
-
 	cfg, err := config.Load()
 	if err != nil {
-		slog.Error("failed to load config", "error", err)
+		fmt.Fprintf(os.Stderr, "config: %v\n", err)
 		os.Exit(1)
 	}
+
+	log := logger.New(cfg.LogLevel)
+	log.Info().Msg("starting fileupload service")
 
 	// Connect to Postgres.
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})
 	if err != nil {
-		slog.Error("failed to connect to database", "error", err)
-		os.Exit(1)
-	}
-
-	// Auto-migrate the schema to ensure the files table exists.
-	if err := db.AutoMigrate(&model.File{}); err != nil {
-		slog.Error("failed to migrate database", "error", err)
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("failed to connect to database")
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		slog.Error("failed to get sql.DB", "error", err)
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("failed to get sql.DB")
 	}
 	defer sqlDB.Close()
+
+	// Run database migrations.
+	if err := runMigrations(cfg.DatabaseURL, log); err != nil {
+		log.Fatal().Err(err).Msg("failed to run migrations")
+	}
+	log.Info().Msg("database migrations completed")
 
 	// Initialize repository.
 	fileRepo := pgRepo.NewFileRepository(db)
@@ -68,8 +72,7 @@ func main() {
 		cfg.S3PublicEndpoint,
 	)
 	if err != nil {
-		slog.Error("failed to create S3 client", "error", err)
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("failed to create S3 client")
 	}
 
 	// Initialize use cases.
@@ -93,8 +96,7 @@ func main() {
 	// Start gRPC listener.
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {
-		slog.Error("failed to listen", "address", cfg.GRPCAddr, "error", err)
-		os.Exit(1)
+		log.Fatal().Err(err).Str("address", cfg.GRPCAddr).Msg("failed to listen")
 	}
 
 	s := grpc.NewServer()
@@ -106,15 +108,27 @@ func main() {
 	defer stop()
 
 	go func() {
-		slog.Info("gRPC server starting", "address", cfg.GRPCAddr)
+		log.Info().Str("address", cfg.GRPCAddr).Msg("gRPC server starting")
 		if err := s.Serve(lis); err != nil {
-			slog.Error("gRPC server error", "error", err)
-			os.Exit(1)
+			log.Fatal().Err(err).Msg("gRPC server error")
 		}
 	}()
 
 	<-ctx.Done()
-	slog.Info("shutting down gRPC server...")
+	log.Info().Msg("shutting down gRPC server...")
 	s.GracefulStop()
-	slog.Info("server stopped")
+	log.Info().Msg("server stopped")
+}
+
+func runMigrations(dbURL string, log zerolog.Logger) error {
+	m, err := migrate.New("file://migrations", dbURL)
+	if err != nil {
+		return fmt.Errorf("migrate init: %w", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("migrate up: %w", err)
+	}
+	return nil
 }

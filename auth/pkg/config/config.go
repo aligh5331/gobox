@@ -22,7 +22,7 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		GRPCPort: envOrDefault("GRPC_PORT", "8081"),
-		HTTPPort: envOrDefault("HTTP_PORT", "8080"),
+		HTTPPort: envOrDefault("HTTP_PORT", "8084"),
 		LogLevel: envOrDefault("LOG_LEVEL", "info"),
 	}
 

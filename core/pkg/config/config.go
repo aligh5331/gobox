@@ -30,8 +30,8 @@ func Load() (*Config, error) {
 		HTTPPort:           httpPort,
 		AuthGRPCAddr:       getEnv("AUTH_GRPC_ADDR", "localhost:8081"),
 		AuthHTTPAddr:       getEnv("AUTH_HTTP_ADDR", "http://localhost:8080"),
-		FileUploadGRPCAddr: getEnv("FILEUPLOAD_GRPC_ADDR", "localhost:8082"),
-		ThumbGenGRPCAddr:   getEnv("THUMBGEN_GRPC_ADDR", "localhost:8083"),
+		FileUploadGRPCAddr: getEnv("FILEUPLOAD_GRPC_ADDR", "localhost:9090"),
+		ThumbGenGRPCAddr:   getEnv("THUMBGEN_GRPC_ADDR", ""),
 		ShortenerGRPCAddr:  getEnv("SHORTENER_GRPC_ADDR", "localhost:9091"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}

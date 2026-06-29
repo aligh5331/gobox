@@ -15,6 +15,10 @@ type Config struct {
 	HTTPPort           string
 	FileUploadGRPCAddr string
 	BaseURL            string
+
+	// LogLevel is the zerolog log level (debug, info, warn, error).
+	// Defaults to "info".
+	LogLevel string
 }
 
 // Load reads configuration from environment variables with defaults.
@@ -26,6 +30,7 @@ func Load() (*Config, error) {
 		HTTPPort:           getEnv("HTTP_PORT", "8082"),
 		FileUploadGRPCAddr: os.Getenv("FILEUPLOAD_GRPC_ADDR"),
 		BaseURL:            getEnv("BASE_URL", "http://localhost:8082"),
+		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}
 
 	if err := cfg.validate(); err != nil {

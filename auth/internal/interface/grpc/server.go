@@ -16,7 +16,6 @@ import (
 	pb "github.com/aligh5331/gobox-proto/gen/auth/v1"
 	"github.com/aligh5331/gobox/auth/internal/application/usecase"
 	"github.com/aligh5331/gobox/auth/internal/domain/model"
-	"github.com/aligh5331/gobox/auth/internal/domain/repository"
 	"github.com/aligh5331/gobox/auth/pkg/jwtutil"
 )
 
@@ -24,17 +23,17 @@ import (
 type AuthServer struct {
 	pb.UnimplementedAuthServiceServer
 
-	registerUC       *usecase.RegisterUseCase
-	loginUC          *usecase.LoginUseCase
-	refreshTokenUC   *usecase.RefreshTokenUseCase
-	logoutUC         *usecase.LogoutUseCase
-	logoutAllUC      *usecase.LogoutAllUseCase
-	getUserUC        *usecase.GetUserUseCase
-	updateProfileUC  *usecase.UpdateProfileUseCase
-	changePasswordUC *usecase.ChangePasswordUseCase
+	registerUC         *usecase.RegisterUseCase
+	loginUC            *usecase.LoginUseCase
+	refreshTokenUC     *usecase.RefreshTokenUseCase
+	logoutUC           *usecase.LogoutUseCase
+	logoutAllUC        *usecase.LogoutAllUseCase
+	getUserUC          *usecase.GetUserUseCase
+	updateProfileUC    *usecase.UpdateProfileUseCase
+	changePasswordUC   *usecase.ChangePasswordUseCase
+	validateSessionUC  *usecase.ValidateSessionUseCase
 
-	sessionRepo repository.SessionRepository
-	keyManager  *jwtutil.KeyManager
+	keyManager *jwtutil.KeyManager
 }
 
 // NewAuthServer creates a new AuthServer.
@@ -47,20 +46,20 @@ func NewAuthServer(
 	getUserUC *usecase.GetUserUseCase,
 	updateProfileUC *usecase.UpdateProfileUseCase,
 	changePasswordUC *usecase.ChangePasswordUseCase,
-	sessionRepo repository.SessionRepository,
+	validateSessionUC *usecase.ValidateSessionUseCase,
 	keyManager *jwtutil.KeyManager,
 ) *AuthServer {
 	return &AuthServer{
-		registerUC:       registerUC,
-		loginUC:          loginUC,
-		refreshTokenUC:   refreshTokenUC,
-		logoutUC:         logoutUC,
-		logoutAllUC:      logoutAllUC,
-		getUserUC:        getUserUC,
-		updateProfileUC:  updateProfileUC,
-		changePasswordUC: changePasswordUC,
-		sessionRepo:      sessionRepo,
-		keyManager:       keyManager,
+		registerUC:        registerUC,
+		loginUC:           loginUC,
+		refreshTokenUC:    refreshTokenUC,
+		logoutUC:          logoutUC,
+		logoutAllUC:       logoutAllUC,
+		getUserUC:         getUserUC,
+		updateProfileUC:   updateProfileUC,
+		changePasswordUC:  changePasswordUC,
+		validateSessionUC: validateSessionUC,
+		keyManager:        keyManager,
 	}
 }
 
@@ -232,25 +231,14 @@ func (s *AuthServer) ValidateSession(ctx context.Context, req *pb.ValidateSessio
 		return &pb.ValidateSessionResponse{Valid: false}, nil
 	}
 
-	session, err := s.sessionRepo.FindByID(ctx, sessionID)
+	out, err := s.validateSessionUC.Execute(ctx, sessionID)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return &pb.ValidateSessionResponse{Valid: false}, nil
-		}
 		return nil, status.Errorf(codes.Internal, "validate session: %v", err)
 	}
 
-	if session.Revoked {
-		return &pb.ValidateSessionResponse{Valid: false}, nil
-	}
-
-	if time.Now().After(session.ExpiresAt) {
-		return &pb.ValidateSessionResponse{Valid: false}, nil
-	}
-
 	return &pb.ValidateSessionResponse{
-		Valid:  true,
-		UserId: session.UserID.String(),
+		Valid:  out.Valid,
+		UserId: out.UserID,
 	}, nil
 }
 
