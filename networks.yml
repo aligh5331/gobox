@@ -1,0 +1,51 @@
+# GoBox Network Topology Reference
+# NOT a Docker Compose file. This documents every named network and its
+# container membership per ADR-001.
+#
+# Networks are defined in core/docker-compose.yml (the root compose file).
+# Per-service compose files declare them as external: true.
+#
+# Legend:
+#   net_edge        — public ingress (internal: false, internet-facing)
+#   net_*_*         — service-to-service (internal: true)
+#   net_*_data      — data-plane (internal: true)
+
+net_edge:                 # public ingress (internal: false)
+  - nginx-proxy-manager   # ports 80/443/81 published to host
+  - core                  # HTTP port 8080
+  - shortener             # HTTP port 8082
+
+net_core_auth:            # internal, core calls auth gRPC
+  - core
+  - auth
+
+net_core_fileupload:      # internal, core calls fileupload gRPC
+  - core
+  - fileupload
+
+net_core_shortener:       # internal, core calls shortener gRPC
+  - core
+  - shortener
+
+net_shortener_fileupload: # internal, shortener calls fileupload gRPC (GetDownloadURL)
+  - shortener
+  - fileupload
+
+net_auth_data:            # internal, auth data-plane
+  - auth
+  - auth-postgres
+
+net_fileupload_data:      # internal, fileupload data-plane
+  - fileupload
+  - fileupload-postgres
+  - minio
+
+net_shortener_data:       # internal, shortener data-plane
+  - shortener
+  - shortener-postgres
+  - shortener-redis
+
+# net_core_thumbgen:      # NOT YET ACTIVE — declared in core/docker-compose.yml
+#                         # but commented out until Phase 5 (ThumbGen).
+#   - core
+#   - thumbgen            # only exists after Phase 5

@@ -1,0 +1,30 @@
+# Standalone Nginx Proxy Manager — edge proxy for GoBox.
+# For the full stack, use docker-compose.yml at the project root.
+# Joins net_edge only. Reaches core and shortener via Docker DNS on net_edge.
+# Uses internal SQLite (default); no external database service needed.
+# Configure proxy hosts via admin UI at http://localhost:81.
+
+services:
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"     # HTTP — redirects to HTTPS
+      - "443:443"   # HTTPS — proxied backends
+      - "81:81"     # Admin UI (bind to 127.0.0.1 in production)
+    environment:
+      TZ: "UTC"
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - net_edge
+
+networks:
+  net_edge:
+    external: true
+    name: net_edge
+
+volumes:
+  npm_data:
+  npm_letsencrypt:

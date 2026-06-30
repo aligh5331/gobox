@@ -1,19 +1,26 @@
+# Standalone development only. For the full stack, use docker-compose.yml at the project root.
+# Networks are external; create them with:
+#   docker network create net_core_auth
+#   docker network create net_auth_data
+
 services:
   auth:
     build: .
     ports:
-      - "8081:8081"
+      # host-published for dev convenience, not for NPM routing
       - "8084:8080"
+    expose:
+      - "8081"
     environment:
       GRPC_PORT: "8081"
       HTTP_PORT: "8080"
-      DATABASE_URL: "postgres://gobox:gobox@postgres:5432/gobox?sslmode=disable"
+      DATABASE_URL: "postgres://gobox:gobox@auth-postgres:5432/gobox?sslmode=disable"
       JWT_PRIVATE_KEY_PATH: "/app/keys/private.pem"
       LOG_LEVEL: "info"
     volumes:
       - ./certs:/app/keys:ro
     depends_on:
-      postgres:
+      auth-postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
@@ -22,18 +29,19 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - gobox
+      - net_core_auth
+      - net_auth_data
 
-  postgres:
+  auth-postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: gobox
       POSTGRES_PASSWORD: gobox
       POSTGRES_DB: gobox
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gobox"]
+      test: ["CMD-SHELL", "pg_isready -U gobox -d gobox && psql -U gobox -d gobox -c 'SELECT 1;'"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -41,12 +49,15 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
-      - gobox
+      - net_auth_data
 
 volumes:
   pgdata:
 
 networks:
-  gobox:
+  net_core_auth:
     external: true
-    name: gobox
+    name: net_core_auth
+  net_auth_data:
+    external: true
+    name: net_auth_data

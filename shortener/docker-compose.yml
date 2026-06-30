@@ -1,14 +1,20 @@
-version: "3.9"
+# Standalone development only. For the full stack, use docker-compose.yml at the project root.
+# Networks are external; create them with:
+#   docker network create net_core_shortener
+#   docker network create net_shortener_fileupload
+#   docker network create net_shortener_data
+#   docker network create net_edge
 
 services:
   shortener:
     build: .
     ports:
-      - "9091:9091"
       - "8082:8082"
+    expose:
+      - "9091"
     environment:
       DATABASE_URL: postgres://shortener:shortener@shortener-postgres:5432/shortener?sslmode=disable
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://shortener-redis:6379/0
       GRPC_PORT: "9091"
       HTTP_PORT: "8082"
       FILEUPLOAD_GRPC_ADDR: fileupload:9090
@@ -17,10 +23,19 @@ services:
     depends_on:
       shortener-postgres:
         condition: service_healthy
-      redis:
+      shortener-redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     networks:
-      - gobox
+      - net_core_shortener
+      - net_shortener_fileupload
+      - net_shortener_data
+      - net_edge
 
   shortener-postgres:
     image: postgres:16-alpine
@@ -28,8 +43,8 @@ services:
       POSTGRES_USER: shortener
       POSTGRES_PASSWORD: shortener
       POSTGRES_DB: shortener
-    ports:
-      - "5434:5432"
+    expose:
+      - "5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U shortener -d shortener && psql -U shortener -d shortener -c 'SELECT 1;'"]
       interval: 5s
@@ -38,12 +53,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - gobox
+      - net_shortener_data
 
-  redis:
+  shortener-redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -52,12 +67,21 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - gobox
+      - net_shortener_data
 
 networks:
-  gobox:
+  net_core_shortener:
     external: true
-    name: gobox
+    name: net_core_shortener
+  net_shortener_fileupload:
+    external: true
+    name: net_shortener_fileupload
+  net_shortener_data:
+    external: true
+    name: net_shortener_data
+  net_edge:
+    external: true
+    name: net_edge
 
 volumes:
   postgres_data:

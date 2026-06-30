@@ -1,0 +1,313 @@
+# Root compose file for the full GoBox stack.
+# Networks are defined inline (the single source of truth).
+# Per-service compose files in each service directory are for standalone development only.
+#
+# Usage:
+#   docker compose up -d
+#
+# All service-to-service addresses use environment variables set here.
+# Data stores use condition: service_healthy for reliable startup ordering.
+# Service-to-service deps use condition: service_started (core's gRPC clients
+# handle transient DNS with back-off).
+
+services:
+  # ──────────────────────────────────────────────
+  # Auth
+  # ──────────────────────────────────────────────
+  auth-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gobox
+      POSTGRES_PASSWORD: gobox
+      POSTGRES_DB: gobox
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gobox -d gobox && psql -U gobox -d gobox -c 'SELECT 1;'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - auth_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - net_auth_data
+
+  auth:
+    build: ./auth
+    ports:
+      # host-published for dev convenience, not for NPM routing
+      - "8084:8080"
+    expose:
+      - "8081"
+    environment:
+      GRPC_PORT: "8081"
+      HTTP_PORT: "8080"
+      DATABASE_URL: "postgres://gobox:gobox@auth-postgres:5432/gobox?sslmode=disable"
+      JWT_PRIVATE_KEY_PATH: "/app/keys/private.pem"
+      LOG_LEVEL: "info"
+    volumes:
+      - ./auth/certs:/app/keys:ro
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - net_core_auth
+      - net_auth_data
+
+  # ──────────────────────────────────────────────
+  # FileUpload
+  # ──────────────────────────────────────────────
+  fileupload-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fileupload
+      POSTGRES_PASSWORD: fileupload
+      POSTGRES_DB: fileupload
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fileupload -d fileupload && psql -U fileupload -d fileupload -c 'SELECT 1;'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - fileupload_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - net_fileupload_data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    expose:
+      - "9000"
+      - "9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+    networks:
+      - net_fileupload_data
+
+  fileupload:
+    build: ./fileupload
+    expose:
+      - "9090"
+    environment:
+      DATABASE_URL: "postgres://fileupload:fileupload@fileupload-postgres:5432/fileupload?sslmode=disable"
+      GRPC_PORT: "9090"
+      S3_ENDPOINT: "minio:9000"
+      S3_BUCKET: "uploads"
+      S3_ACCESS_KEY: "minioadmin"
+      S3_SECRET_KEY: "minioadmin"
+      PRESIGN_UPLOAD_TTL_MINUTES: "15"
+      PRESIGN_DOWNLOAD_TTL_MINUTES: "60"
+      MAX_FILE_SIZE: "104857600"
+    depends_on:
+      fileupload-postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q :9090"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - net_core_fileupload
+      - net_shortener_fileupload
+      - net_fileupload_data
+
+  # ──────────────────────────────────────────────
+  # Shortener
+  # ──────────────────────────────────────────────
+  shortener-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shortener
+      POSTGRES_PASSWORD: shortener
+      POSTGRES_DB: shortener
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortener -d shortener && psql -U shortener -d shortener -c 'SELECT 1;'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - shortener_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - net_shortener_data
+
+  shortener-redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - shortener_redis_data:/data
+    restart: unless-stopped
+    networks:
+      - net_shortener_data
+
+  shortener:
+    build: ./shortener
+    ports:
+      - "8082:8082"
+    expose:
+      - "9091"
+    environment:
+      DATABASE_URL: "postgres://shortener:shortener@shortener-postgres:5432/shortener?sslmode=disable"
+      REDIS_URL: "redis://shortener-redis:6379/0"
+      GRPC_PORT: "9091"
+      HTTP_PORT: "8082"
+      FILEUPLOAD_GRPC_ADDR: "fileupload:9090"
+      BASE_URL: "http://localhost:8082"
+      LOG_LEVEL: "info"
+    depends_on:
+      shortener-postgres:
+        condition: service_healthy
+      shortener-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - net_core_shortener
+      - net_shortener_fileupload
+      - net_shortener_data
+      - net_edge
+
+  # ──────────────────────────────────────────────
+  # Core API
+  # ──────────────────────────────────────────────
+  core:
+    build: ./core
+    ports:
+      - "3000:8080"
+    environment:
+      HTTP_PORT: "8080"
+      AUTH_GRPC_ADDR: "auth:8081"
+      AUTH_HTTP_ADDR: "http://auth:8080"
+      FILEUPLOAD_GRPC_ADDR: "fileupload:9090"
+      SHORTENER_GRPC_ADDR: "shortener:9091"
+      THUMBGEN_GRPC_ADDR: "thumbgen:9092"
+      LOG_LEVEL: "info"
+      LOG_FORMAT: "pretty"
+    depends_on:
+      auth:
+        condition: service_started
+      fileupload:
+        condition: service_started
+      shortener:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - net_edge
+      - net_core_auth
+      - net_core_fileupload
+      - net_core_shortener
+      # net_core_thumbgen — add here in Phase 5
+
+  # ──────────────────────────────────────────────
+  # Nginx Proxy Manager (public edge)
+  # ──────────────────────────────────────────────
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    environment:
+      TZ: "UTC"
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    depends_on:
+      core:
+        condition: service_started
+      shortener:
+        condition: service_started
+    networks:
+      - net_edge
+
+# ──────────────────────────────────────────────
+# Volumes
+# ──────────────────────────────────────────────
+volumes:
+  auth_pgdata:
+  fileupload_pgdata:
+  minio_data:
+  shortener_pgdata:
+  shortener_redis_data:
+  npm_data:
+  npm_letsencrypt:
+
+# ──────────────────────────────────────────────
+# Networks — single source of truth
+# All declared inline (external: false).
+# net_core_thumbgen is NOT declared here until Phase 5.
+# ──────────────────────────────────────────────
+networks:
+  net_edge:
+    internal: false
+    name: net_edge
+
+  net_core_auth:
+    internal: true
+    name: net_core_auth
+
+  net_core_fileupload:
+    internal: true
+    name: net_core_fileupload
+
+  net_core_shortener:
+    internal: true
+    name: net_core_shortener
+
+  net_shortener_fileupload:
+    internal: true
+    name: net_shortener_fileupload
+
+  net_auth_data:
+    internal: true
+    name: net_auth_data
+
+  net_fileupload_data:
+    internal: true
+    name: net_fileupload_data
+
+  net_shortener_data:
+    internal: true
+    name: net_shortener_data

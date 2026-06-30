@@ -1,14 +1,20 @@
-version: "3.9"
+# Standalone development only. For the full stack, use docker-compose.yml at the project root.
+# Networks are external; create them with:
+#   docker network create net_core_fileupload
+#   docker network create net_shortener_fileupload
+#   docker network create net_fileupload_data
 
 services:
   fileupload:
     build: .
-    ports:
-      - "9090:9090"
+    expose:
+      - "9090"
     networks:
-      - gobox
+      - net_core_fileupload
+      - net_shortener_fileupload
+      - net_fileupload_data
     environment:
-      DATABASE_URL: postgres://fileupload:fileupload@postgres:5432/fileupload?sslmode=disable
+      DATABASE_URL: postgres://fileupload:fileupload@fileupload-postgres:5432/fileupload?sslmode=disable
       GRPC_PORT: "9090"
       S3_ENDPOINT: minio:9000
       S3_BUCKET: uploads
@@ -18,21 +24,27 @@ services:
       PRESIGN_DOWNLOAD_TTL_MINUTES: "60"
       MAX_FILE_SIZE: "104857600"
     depends_on:
-      postgres:
+      fileupload-postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q :9090"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
-  postgres:
+  fileupload-postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: fileupload
       POSTGRES_PASSWORD: fileupload
       POSTGRES_DB: fileupload
-    ports:
-      - "5435:5432"
+    expose:
+      - "5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fileupload"]
+      test: ["CMD-SHELL", "pg_isready -U fileupload -d fileupload && psql -U fileupload -d fileupload -c 'SELECT 1;'"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -40,7 +52,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d
     networks:
-      - gobox
+      - net_fileupload_data
 
   minio:
     image: minio/minio:latest
@@ -48,9 +60,9 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    expose:
+      - "9000"
+      - "9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -59,13 +71,19 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - gobox
+      - net_fileupload_data
 
 volumes:
   postgres_data:
   minio_data:
 
 networks:
-  gobox:
+  net_core_fileupload:
     external: true
-    name: gobox
+    name: net_core_fileupload
+  net_shortener_fileupload:
+    external: true
+    name: net_shortener_fileupload
+  net_fileupload_data:
+    external: true
+    name: net_fileupload_data
