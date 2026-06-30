@@ -29,7 +29,7 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "ss -tln | grep -q :9090"]
+      test: ["CMD-SHELL", "netstat -tln | grep -q :9090"]
       interval: 10s
       timeout: 5s
       retries: 5
