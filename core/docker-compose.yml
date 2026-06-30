@@ -8,7 +8,7 @@ services:
       AUTH_GRPC_ADDR: "auth:8081"
       AUTH_HTTP_ADDR: "http://auth:8080"
       FILEUPLOAD_GRPC_ADDR: "fileupload:9090"
-      SHORTENER_GRPC_ADDR: "shortener:9091"
+      #SHORTENER_GRPC_ADDR: "shortener:9091"
       LOG_LEVEL: "info"
       LOG_FORMAT: "pretty"
     healthcheck:
@@ -59,7 +59,6 @@ services:
       retries: 5
     volumes:
       - fileupload_pgdata:/var/lib/postgresql/data
-      - ../fileupload/migrations:/docker-entrypoint-initdb.d
     restart: unless-stopped
     networks:
       - gobox

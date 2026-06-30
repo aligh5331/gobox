@@ -28,10 +28,10 @@ The auth service depends on postgres (`depends_on: postgres condition: service_h
 | Service | Host address | Container port | Purpose |
 |---------|-------------|----------------|---------|
 | auth (gRPC) | `localhost:8081` | 8081 | AuthService RPCs |
-| auth (HTTP) | `localhost:8082` | 8080 | Health + JWKS |
+| auth (HTTP) | `localhost:8084` | 8080 | Health + JWKS |
 | postgres | `localhost:5432` | 5432 | Database |
 
-> Note: **8082** is the host-mapped port for auth HTTP. The spec says auth's HTTP port is 8080, but the compose maps host:8082 → container:8080 to avoid conflict with other services on the host. The healthcheck inside the container uses `http://localhost:8080/health` (correct).
+> Note: **8084** is the host-mapped port for auth HTTP. The spec says auth's HTTP port is 8080, but the compose maps host:8084 → container:8080 to avoid conflict with other services on the host. The healthcheck inside the container uses `http://localhost:8080/health` (correct).
 
 ---
 
@@ -343,11 +343,11 @@ Auth: none
 
 ## Known environment constraints
 
-1. **Port 8082 for auth HTTP, not 8080.** The docker-compose maps host:8082 → container:8080. The spec says auth's HTTP port is 8080, but on the host you must use `localhost:8082`. The healthcheck inside the container correctly uses `localhost:8080`.
+1. **Port 8084 for auth HTTP, not 8080.** The docker-compose maps host:8084 → container:8080. The spec says auth's HTTP port is 8080, but on the host you must use `localhost:8084`. The healthcheck inside the container correctly uses `localhost:8080`.
 
-2. **Key files required at startup.** The compose mounts `./keys:/app/keys:ro` and expects `JWT_PRIVATE_KEY_PATH=/app/keys/private.pem`. If `./keys/private.pem` does not exist, the auth service will fail startup with a fatal error. The directory contains:
-   - `keys/private.pem` (required — RSA 2048-bit private key)
-   - `keys/public.pem` (optional — used for `JWT_PREVIOUS_PRIVATE_KEY_PATH`)
+2. **Key files required at startup.** The compose mounts `./certs:/app/keys:ro` and expects `JWT_PRIVATE_KEY_PATH=/app/keys/private.pem`. If `./certs/private.pem` does not exist, the auth service will fail startup with a fatal error. The directory contains:
+   - `certs/private.pem` (required — RSA 2048-bit private key)
+   - `certs/public.pem` (optional — used for `JWT_PREVIOUS_PRIVATE_KEY_PATH`)
 
 3. **Postgres DB name mismatch risk.** The docker-compose uses `POSTGRES_DB=gobox` and the DATABASE_URL points to `postgres://gobox:gobox@postgres:5432/gobox`. The `.env.example` uses `gobox_auth`. If you use a standalone `.env` file with `gobox_auth` as the DB name but the compose creates a `gobox` database, the service will fail to connect. Always rely on the compose file's DATABASE_URL.
 
@@ -376,14 +376,14 @@ This compiles the auth service binary and all packages, including any E2E test f
 ## Run command
 
 ```bash
-cd /home/ali/gobox/auth && docker compose up -d && go test ./e2e/ -v -count=1 -timeout 120s
+cd /home/ali/gobox/auth && docker compose up -d && go test ./e2e/ -v -count=1 -timeout 180s
 ```
 
 Breakdown:
 - `docker compose up -d` — starts postgres + auth in the background
 - The test suite should include a startup health check loop (poll `/health` and gRPC `ValidateSession`/`GetPublicKey` up to 30s) before running scenarios
 - `-count=1` disables test caching
-- `-timeout 120s` gives the suite 2 minutes to complete (generous for 25+ sequential gRPC calls)
+- `-timeout 180s` gives the suite 3 minutes to complete (generous for 25+ sequential gRPC calls)
 
 ---
 

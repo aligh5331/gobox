@@ -32,7 +32,7 @@ func Load() (*Config, error) {
 		AuthHTTPAddr:       getEnv("AUTH_HTTP_ADDR", "http://localhost:8080"),
 		FileUploadGRPCAddr: getEnv("FILEUPLOAD_GRPC_ADDR", "localhost:9090"),
 		ThumbGenGRPCAddr:   getEnv("THUMBGEN_GRPC_ADDR", ""),
-		ShortenerGRPCAddr:  getEnv("SHORTENER_GRPC_ADDR", "localhost:9091"),
+		ShortenerGRPCAddr:  getEnv("SHORTENER_GRPC_ADDR", ""),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 	}
 	return cfg, nil

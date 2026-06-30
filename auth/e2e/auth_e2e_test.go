@@ -1,5 +1,5 @@
 // Package e2e contains end-to-end tests for the auth service.
-// Run: go test ./e2e/ -v -count=1 -timeout 120s
+// Run: go test ./e2e/ -v -count=1 -timeout 180s
 //
 // Prerequisites:
 //   - docker compose up -d (postgres + auth)
@@ -26,7 +26,7 @@ import (
 
 const (
 	grpcAddr = "localhost:8081"
-	httpAddr = "http://localhost:8082"
+	httpAddr = "http://localhost:8084"
 )
 
 // newGRPCClient creates a new AuthService gRPC client connection.

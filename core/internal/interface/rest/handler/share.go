@@ -2,23 +2,32 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	shortenerv1 "github.com/aligh5331/gobox-proto/gen/shortener/v1"
 	"github.com/labstack/echo/v4"
+	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/aligh5331/gobox/core/internal/infrastructure/grpcclient/shortener"
 	"github.com/aligh5331/gobox/core/internal/interface/rest/middleware"
 	"github.com/aligh5331/gobox/core/internal/interface/rest/response"
 )
 
+// ShortLinker is the interface for short link operations.
+// It shields ShareHandler from the concrete shortener client dependency.
+type ShortLinker interface {
+	CreateLink(ctx context.Context, req *shortenerv1.CreateLinkRequest) (*shortenerv1.CreateLinkResponse, error)
+	ListLinks(ctx context.Context, req *shortenerv1.ListLinksRequest) (*shortenerv1.ListLinksResponse, error)
+	DeleteLink(ctx context.Context, req *shortenerv1.DeleteLinkRequest) (*emptypb.Empty, error)
+}
+
 // ShareHandler handles short link (share) operations.
 type ShareHandler struct {
-	shortener *shortener.Client
+	shortener ShortLinker
 }
 
 // NewShareHandler creates a new ShareHandler.
-func NewShareHandler(shortener *shortener.Client) *ShareHandler {
+func NewShareHandler(shortener ShortLinker) *ShareHandler {
 	return &ShareHandler{shortener: shortener}
 }
 
@@ -30,6 +39,10 @@ type CreateShareRequest struct {
 // CreateShare handles POST /api/v1/files/:id/share
 // Calls Shortener CreateLink gRPC and returns the short URL.
 func (h *ShareHandler) CreateShare(c echo.Context) error {
+	if h.shortener == nil {
+		return middleware.NewHTTPError(http.StatusServiceUnavailable, "SHORTENER_DISABLED", "short link service is not configured")
+	}
+
 	userID := middleware.GetUserID(c)
 	if userID == "" {
 		return middleware.NewHTTPError(http.StatusUnauthorized, "UNAUTHORIZED", "invalid token claims")
@@ -61,6 +74,10 @@ func (h *ShareHandler) CreateShare(c echo.Context) error {
 // Note: The :id path param (file_id) is accepted but the current proto
 // does not support file_id filtering. All links for the user are returned.
 func (h *ShareHandler) ListLinks(c echo.Context) error {
+	if h.shortener == nil {
+		return middleware.NewHTTPError(http.StatusServiceUnavailable, "SHORTENER_DISABLED", "short link service is not configured")
+	}
+
 	userID := middleware.GetUserID(c)
 	if userID == "" {
 		return middleware.NewHTTPError(http.StatusUnauthorized, "UNAUTHORIZED", "invalid token claims")
@@ -79,6 +96,10 @@ func (h *ShareHandler) ListLinks(c echo.Context) error {
 // DeleteLink handles DELETE /api/v1/links/:link_id
 // Calls Shortener DeleteLink gRPC.
 func (h *ShareHandler) DeleteLink(c echo.Context) error {
+	if h.shortener == nil {
+		return middleware.NewHTTPError(http.StatusServiceUnavailable, "SHORTENER_DISABLED", "short link service is not configured")
+	}
+
 	userID := middleware.GetUserID(c)
 	if userID == "" {
 		return middleware.NewHTTPError(http.StatusUnauthorized, "UNAUTHORIZED", "invalid token claims")

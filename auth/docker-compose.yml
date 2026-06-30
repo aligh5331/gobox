@@ -11,7 +11,7 @@ services:
       JWT_PRIVATE_KEY_PATH: "/app/keys/private.pem"
       LOG_LEVEL: "info"
     volumes:
-      - ./keys:/app/keys:ro
+      - ./certs:/app/keys:ro
     depends_on:
       postgres:
         condition: service_healthy

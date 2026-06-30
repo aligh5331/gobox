@@ -79,12 +79,15 @@ func main() {
 		defer thumbgenClient.Close()
 	}
 
-	// Dial Shortener gRPC.
-	shortenerClient, err := shortener.NewClient(ctx, cfg.ShortenerGRPCAddr)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to shortener gRPC")
+	// Create Shortener client (nil-safe — only dials if addr is configured).
+	var shortenerClient *shortener.Client
+	if cfg.ShortenerGRPCAddr != "" {
+		shortenerClient, err = shortener.NewClient(ctx, cfg.ShortenerGRPCAddr)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create shortener client")
+		}
+		defer shortenerClient.Close()
 	}
-	defer shortenerClient.Close()
 
 	// Build Echo server.
 	e := echo.New()
